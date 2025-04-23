@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Video Progress Tracker</title>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    video { width: 100%; max-width: 720px; display: block; margin-bottom: 10px; }
+    .progress { font-size: 18px; font-weight: bold; }
+    #customProgressContainer {
+  width: 100%;
+  max-width: 720px;
+  background-color: #ddd;
+  height: 12px;
+  border-radius: 8px;
+  margin: 10px 0;
+  overflow: hidden;
+}
+
+#customProgressBar {
+  height: 100%;
+  width: 0%;
+  background-color: #4caf50;
+  transition: width 0.3s ease;
+}
+
+button {
+  background-color: #ff4d4d;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  font-size: 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+  </style>
+</head>
+<body>
+  <h2> Lecture Video</h2>
+  <video id="video" controls>
+    <source src="{{ url_for('static', filename='sample.mp4') }}" type="video/mp4" />
+    Your browser does not support the video tag.
+  </video>
+
+  <div class="progress">Progress: <span id="progressPercent">0%</span></div>
+
+  <!-- 💡 Fancy Visual Progress Bar -->
+  <div id="customProgressContainer">
+    <div id="customProgressBar"></div>
+  </div>
+  
+  <!-- 💡 Clear Progress Button -->
+  <button onclick="clearProgress()">Clear Progress</button>
+  
+
+  <script>
+    const video = document.getElementById("video");
+    const progressText = document.getElementById("progressPercent");
+
+    const videoKey = "progress_sample"; // Key for localStorage
+    let watched = JSON.parse(localStorage.getItem(videoKey)) || [];
+
+    function mergeIntervals(intervals) {
+      intervals.sort((a, b) => a[0] - b[0]);
+      const merged = [];
+      for (const interval of intervals) {
+        if (!merged.length || interval[0] > merged[merged.length - 1][1]) {
+          merged.push(interval);
+        } else {
+          merged[merged.length - 1][1] = Math.max(merged[merged.length - 1][1], interval[1]);
+        }
+      }
+      return merged;
+    }
+
+    function calculateProgress() {
+      const merged = mergeIntervals(watched);
+      let total = 0;
+      merged.forEach(([start, end]) => total += end - start);
+      const percent = Math.min(100, ((total / video.duration) * 100).toFixed(1));
+      progressText.textContent = percent + "%";
+      document.getElementById("customProgressBar").style.width = percent + "%";
+
+    }
+
+    let lastTime = 0;
+    let currentInterval = [0, 0];
+
+    video.addEventListener("timeupdate", () => {
+      const currentTime = video.currentTime;
+
+      if (Math.abs(currentTime - lastTime) < 2) {
+        currentInterval[1] = currentTime;
+      } else {
+        if (currentInterval[1] - currentInterval[0] > 1) {
+          watched.push([...currentInterval]);
+        }
+        currentInterval = [currentTime, currentTime];
+      }
+
+      lastTime = currentTime;
+      calculateProgress();
+      localStorage.setItem(videoKey, JSON.stringify(watched));
+    });
+
+    video.addEventListener("pause", () => {
+      if (currentInterval[1] - currentInterval[0] > 1) {
+        watched.push([...currentInterval]);
+        localStorage.setItem(videoKey, JSON.stringify(watched));
+        calculateProgress();
+      }
+    });
+
+    video.addEventListener("loadedmetadata", () => {
+      // Resume from last watched position
+      if (watched.length > 0) {
+        const last = watched[watched.length - 1][1];
+        video.currentTime = last;
+      }
+      calculateProgress();
+    });
+    function clearProgress() {
+  localStorage.removeItem(videoKey);
+  watched = [];
+  currentInterval = [0, 0];
+  progressText.textContent = "0%";
+  document.getElementById("customProgressBar").style.width = "0%";
+  alert("Progress cleared!");
+  video.currentTime = 0;
+}
+
+  </script>
+</body>
+</html>
