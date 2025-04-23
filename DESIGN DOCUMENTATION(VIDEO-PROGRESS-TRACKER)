@@ -1,0 +1,17 @@
+🛠️ Design Documentation
+📌 How I Tracked Watched Intervals
+To track which parts of the video a user watched, I listened to the timeupdate event from the HTML5 video element. This event fires frequently as the video plays, allowing me to capture the current playback position over time. I created dynamic intervals like [start, end] to store the watched portions. These intervals were saved in localStorage with a unique key based on the video filename. This way, the app remembers what part of the video the user watched, even after a refresh or when they revisit.
+
+📌 How I Merged Intervals to Calculate Unique Progress
+As users might skip around or re-watch parts of the video, overlapping time intervals could exist in the watched list. So to get the actual unique progress, I used an algorithm to merge overlapping or adjacent intervals. After sorting the intervals by their start time, I checked each one against the last merged entry. If it overlapped, I merged them into a single interval. Then I calculated the total unique seconds watched by summing all merged intervals, and finally, I converted it into a percentage of the full video duration. That percentage was displayed live as the "Progress."
+
+⚙️ Challenges Faced and How I Solved Them
+1. Video Progress Not Saving Properly
+Initially, I noticed that sometimes progress wasn't updating or saving correctly. The issue turned out to be that I wasn’t handling pauses and skips correctly. I solved it by also listening to the pause event and finalizing the interval before saving.
+
+2. Large File Push Issue on GitHub
+I accidentally added a video file larger than GitHub's 100MB limit. Git refused to push the repository, even after deleting the file. After some digging, I realized Git tracks file history too — so I used git filter-repo to remove the large video completely from history and fixed the problem. It was a tough lesson but I’m glad I went through it.
+
+3. Video Not Resuming from Last Watched Point
+This feature was essential, and after trying a few things, I figured out I had to use the loadedmetadata event. Only after the video duration is known can we safely jump to the saved timestamp using video.currentTime.
+
